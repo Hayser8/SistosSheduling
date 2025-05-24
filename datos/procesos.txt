@@ -1,0 +1,37 @@
+# Prueba de procesos: PID, BurstTime, ArrivalTime, Priority
+P1,  10,  0,   3
+P2,  4,   1,   1
+P3,  8,   2,   4
+P4,  15,  3,   2
+P5,  6,   5,   5
+P6,  12,  5,   2
+P7,  3,   6,   4
+P8,  9,   7,   3
+P9,  5,   8,   1
+P10, 7,   10,  3
+P11, 11,  11,  2
+P12, 2,   12,  5
+P13, 14,  13,  1
+P14, 4,   14,  4
+P15, 13,  15,  2
+P16, 6,   17,  3
+P17, 9,   18,  1
+P18, 5,   20,  4
+P19, 8,   21,  2
+P20, 3,   22,  5
+
+#llegada simultanea
+P21, 7,   22,  2
+P22, 4,   22,  3
+
+# Procesos con burst muy largos
+P23, 20,  25,  1
+P24, 18,  26,  2
+
+# Procesos con prioridad alta (1 = más alta)
+P25, 5,   27,  1
+P26, 6,   27,  1
+
+# Proceso tardío de poca carga
+P27, 2,   30,  4
+P28, 1,   31,  5
