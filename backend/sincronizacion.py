@@ -17,15 +17,17 @@ def simulate_synchronization(
     mode: str = "mutex"  # o "semaphore"
 ) -> List[ActionEvent]:
     """
-    Para cada ciclo agrupa las acciones, y según counter del recurso
-    decide cuáles ACCESED y el resto WAITING. Cada acción dura 1 ciclo.
+    Para cada ciclo agrupa las acciones y, según el modo:
+      - mutex: cap = 1
+      - semaphore: cap = cuenta inicial del recurso
+    Decide cuáles ACCESED y el resto WAITING. Cada acción dura 1 ciclo.
     """
     # counter inicial por recurso
-    counters = {r.name: r.counter for r in resources}
+    counters = {r.name: r.counter for r in resources}  # :contentReference[oaicite:0]{index=0}
     # agrupa acciones por ciclo
     acts_by_cycle = defaultdict(list)
     for act in actions:
-        acts_by_cycle[act.cycle].append(act)
+        acts_by_cycle[act.cycle].append(act)           # :contentReference[oaicite:1]{index=1}
 
     events: List[ActionEvent] = []
     for cycle in sorted(acts_by_cycle):
@@ -35,9 +37,13 @@ def simulate_synchronization(
             por_recurso[act.resource].append(act)
 
         for res_name, acts in por_recurso.items():
-            cap = counters.get(res_name, 1)
-            # en semáforo podrías ajustar cap dinámicamente,
-            # pero para demo lo dejamos constante por ciclo
+            # capacidad según modo
+            if mode == "mutex":
+                cap = 1
+            else:  # semaphore
+                cap = counters.get(res_name, 1)
+
+            # genera ACCESED o WAITING
             for idx, act in enumerate(acts):
                 status = "ACCESED" if idx < cap else "WAITING"
                 events.append(

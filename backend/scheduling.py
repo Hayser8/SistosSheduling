@@ -45,38 +45,48 @@ def sjf(processes: List[Process]) -> List[Event]:
     return timeline
 
 def srt(processes: List[Process]) -> List[Event]:
+    # 1) Orden inicial por llegada
     procs = sorted(processes, key=lambda p: p.at)
-    ready: List[Process] = []
-    timeline: List[Event] = []
     remaining = {p.pid: p.bt for p in procs}
+    
+    timeline: List[Event] = []
+    ready: List[Process] = []
     current = 0
     i = 0
+    
     last_pid = None
     slice_start = 0
 
     while i < len(procs) or ready:
+        # 2) Añadir al ready todos los que han llegado
         while i < len(procs) and procs[i].at <= current:
             ready.append(procs[i])
             i += 1
+
+        # 3) Si no hay nada listo, avanzar al siguiente at
         if not ready:
             current = procs[i].at
             continue
-        # Escogemos el con menor tiempo restante
-        ready.sort(key=lambda p: remaining[p.pid])
-        p = ready[0]
-        # Si cambiamos de proceso, cerramos el slice anterior
-        if last_pid != p.pid:
+
+        # 4) Selección del siguiente proceso:
+        #    menor remaining, y en empate el que llegó más tarde (–p.at)
+        p = min(ready, key=lambda p: (remaining[p.pid], -p.at))
+
+        # 5) Si cambiamos de PID, cerramos slice previo
+        if p.pid != last_pid:
             if last_pid is not None:
                 timeline.append(Event(last_pid, slice_start, current))
             slice_start = current
             last_pid = p.pid
-        # Ejecutamos un ciclo
+
+        # 6) Ejecutar un “tick”
         remaining[p.pid] -= 1
         current += 1
-        # Si terminó, cerramos slice y sacamos de ready
+
+        # 7) Si remanentes, se queda en ready; si no, lo sacamos y cerramos slice
         if remaining[p.pid] == 0:
             timeline.append(Event(p.pid, slice_start, current))
-            ready.pop(0)
+            ready.remove(p)
             last_pid = None
 
     return timeline

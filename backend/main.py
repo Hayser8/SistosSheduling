@@ -28,8 +28,15 @@ def simulate_with_engine(events: List[Event], delay: float = 0.2):
     max_cycle = max(e.end for e in events)
     def on_cycle(cycle: int, evs: List[Event]):
         if evs:
-            print(f"[ Ciclo {cycle:3d} ] ──", 
-                  ", ".join(f"{e.pid} ({e.start}→{e.end})" for e in evs))
+            # si el evento tiene atributo status, lo incluimos
+            details = []
+            for e in evs:
+                s = getattr(e, 'status', None)
+                if s:
+                    details.append(f"{e.pid}({e.start}→{e.end},{s})")
+                else:
+                    details.append(f"{e.pid}({e.start}→{e.end})")
+            print(f"[ Ciclo {cycle:3d} ] ──", ", ".join(details))
         else:
             print(f"[ Ciclo {cycle:3d} ] (no inicia ningún proceso)")
     engine = SimulationEngine(events, on_cycle, max_cycle)
@@ -37,17 +44,17 @@ def simulate_with_engine(events: List[Event], delay: float = 0.2):
     while engine.current <= engine.max_cycle:
         engine.step()
         time.sleep(delay)
-    print("\n✅ Simulación finalizada.")
+    print("\n✅ Simulación finalizada.\n")
 
 def main():
     parser = argparse.ArgumentParser(description="Prueba de distintos algoritmos de scheduling y sincronización")
-    parser.add_argument('-m','--mode', choices=['sched','sync'], default='sched',
+    parser.add_argument('-m','--mode', choices=['sched','sync'], default='sync',
                         help="Modo: 'sched' para calendarización, 'sync' para sincronización")
-    parser.add_argument('-a','--alg', choices=['fifo','sjf','srt','rr','priority'], default='sjf',
+    parser.add_argument('-a','--alg', choices=['fifo','sjf','srt','rr','priority'], default='priority',
                         help="Algoritmo de calendarización (solo en modo sched)")
     parser.add_argument('-q','--quantum', type=int, default=2,
-                        help="Quantum para Round Robin (solo en mode sched)")
-    parser.add_argument('-d','--delay', type=float, default=0.2,
+                        help="Quantum para Round Robin (solo en modo sched)")
+    parser.add_argument('-d','--delay', type=float, default=0.05,
                         help="Delay en segundos entre ciclos de simulación")
     args = parser.parse_args()
 
@@ -80,24 +87,26 @@ def main():
             for pid, m in metrics["per_process"].items():
                 print(f"    {pid}: WT={m['waiting_time']}, TA={m['turnaround_time']}")
 
-        else:
-            # Sincronización
-            sim = SincronizacionSimulator()
-            sim.processes = procs
-            sim.resources = res
-            sim.actions   = acts
-            # elija 'mutex' o 'semaphore' según convenga
-            sim.configure('mutex')
-            events = sim.get_events()
-            # contamos accesos vs esperas
-            acc  = sum(1 for ev in events if getattr(ev, 'status','')=='ACCESED')
-            wait = sum(1 for ev in events if getattr(ev, 'status','')!='ACCESED')
-            print("\nMétricas de Sincronización:")
-            print(f"  Accesos totales: {acc}")
-            print(f"  Esperas totales: {wait}")
+            simulate_with_engine(events, delay=args.delay)
 
-        # Ejecutar la simulación en consola
-        simulate_with_engine(events, delay=args.delay)
+        else:
+            # Sincronización: ejecutamos ambos modos
+            for mode in ('mutex', 'semaphore'):
+                sim = SincronizacionSimulator()
+                sim.processes = procs
+                sim.resources = res
+                sim.actions   = acts
+                sim.configure(mode)
+
+                events = sim.get_events()
+                acc  = sum(1 for ev in events if ev.status == 'ACCESED')
+                wait = sum(1 for ev in events if ev.status != 'ACCESED')
+
+                print(f"\n=== Sincronización con {mode.upper()} ===")
+                print(f"Accesos totales: {acc}")
+                print(f"Esperas totales: {wait}")
+
+                simulate_with_engine(events, delay=args.delay)
 
     except FileNotFoundError as fnf:
         print('❌ Archivo no encontrado:', fnf)

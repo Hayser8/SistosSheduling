@@ -267,10 +267,11 @@ class SimulationApp(ctk.CTk):
     def run_sync(self, events, max_cycle):
         """
         Dibuja cada evento de sincronización en self.sync_canvas,
-        iterando ciclos por ev.start en lugar de ev.cycle.
+        iterando ciclos por ev.start. Cada fila es un proceso (PID).
+        Eventos 'ACCESED' en verde, 'WAITING' en rojo.
         """
-        # Prepara índice de recursos
-        recurso_index = {r.name: i for i, r in enumerate(self.resources)}
+        # Índice de procesos → fila en el canvas
+        process_index = {p.pid: i for i, p in enumerate(self.processes)}
 
         for cycle in range(max_cycle + 1):
             # pausa/resume
@@ -279,36 +280,44 @@ class SimulationApp(ctk.CTk):
             if not self._running:
                 break
 
-            # actualiza etiqueta de ciclo
+            # etiqueta de ciclo
             self.cycle_label.configure(text=f"Ciclo: {cycle}")
 
-            # dibuja los eventos que comienzan en este ciclo
+            # dibuja los eventos que empiezan en este ciclo
             for ev in events:
                 if ev.start == cycle:
-                    # coordenadas
+                    # cálculo de coordenadas
                     x1 = cycle * X_SCALE
                     x2 = ev.end * X_SCALE
-                    row = recurso_index[ev.resource]
+                    row = process_index[ev.pid]
                     y1 = row * ROW_HEIGHT
                     y2 = y1 + ROW_HEIGHT - 5
 
                     # color según estado
-                    color = "#4CAF50" if ev.status == "ACCESED" else ""
+                    if ev.status == "ACCESED":
+                        color = "#4CAF50"   # verde
+                        text_color = "white"
+                    else:
+                        color = "#F44336"   # rojo
+                        text_color = "black"
+
+                    # rectángulo del evento
                     rect = self.sync_canvas.create_rectangle(
                         x1, y1, x2, y2,
                         fill=color, outline="black"
                     )
+                    # texto con el PID
                     self.sync_canvas.create_text(
                         (x1 + x2) / 2, (y1 + y2) / 2,
-                        text=ev.pid, fill="black"
+                        text=ev.pid, fill=text_color
                     )
-                    # bind para detalle
+                    # bind para detalles
                     self.sync_canvas.tag_bind(
                         rect, "<Button-1>",
                         lambda e, ev=ev: self.show_event_details(ev)
                     )
 
-            # actualiza scrollregion
+            # ajustar scrollregion al contenido
             self.sync_canvas.configure(
                 scrollregion=self.sync_canvas.bbox("all")
             )
@@ -327,13 +336,32 @@ class SimulationApp(ctk.CTk):
             self._pause_event.set()
 
     def reset_simulation(self):
+        # Detener cualquier animación en curso
         self._running = False
         self._pause_event.clear()
-        for canvas in getattr(self, 'gantt_canvases', {}).values():
-            canvas.delete("all")
+
+        # 1) Limpiar todos los Gantt de calendarización
+        if hasattr(self, 'gantt_canvases'):
+            for canvas in self.gantt_canvases.values():
+                canvas.delete("all")
+
+        # 2) Limpiar Gantt de sincronización (si existe)
+        if hasattr(self, 'sync_canvas'):
+            self.sync_canvas.delete("all")
+
+        # 3) Limpiar el contenedor principal de multi_gantt
+        for widget in self.multi_gantt.winfo_children():
+            widget.destroy()
+
+        # 4) Resetear los datos de color y métricas
         self.color_map.clear()
+        self.last_metrics.clear()
+        self.sim_events.clear()
+
+        # 5) Restaurar etiquetas y menús
         self.cycle_label.configure(text="Ciclo: 0")
         self.pid_menu.configure(values=[])
+        self.pid_menu.set("")  # opcional: deseleccionar cualquier PID
         self.detail_label.configure(text="Seleccione un PID para ver métricas")
 
     def build_gantt_canvases(self, algos):
