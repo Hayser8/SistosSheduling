@@ -3,6 +3,7 @@ P1,  READ,  R1,     0
 P2,  WRITE, R2,     0
 P3,  READ,  R2,     0
 P4,  WRITE, R3,     0
+P4,  WRITE, R3,     1
 P5,  READ,  R4,     1
 P6,  WRITE, R5,     1
 P7,  READ,  R6,     1
