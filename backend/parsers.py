@@ -1,5 +1,3 @@
-# backend/parsers.py
-
 import os
 from typing import List
 from backend.models import Process, Resource, Action

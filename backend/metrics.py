@@ -1,5 +1,3 @@
-# backend/metrics.py
-
 from typing import List, Dict
 from collections import defaultdict
 
